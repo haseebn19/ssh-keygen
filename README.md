@@ -2,7 +2,7 @@
 
 ![SSH Key Generator Logo](logo.png)
 
-SSH Key Generator is a desktop application designed to simplify the process of generating SSH keys. Built with Python and Tkinter, this application provides a user-friendly interface for generating SSH keys with various algorithms and key lengths. It's a simple solution for creating, viewing, and saving SSH keys.
+SSH Key Generator is an application designed to simplify the process of generating SSH keys. Built with Python and Tkinter, this application provides a user-friendly interface for generating SSH keys with different algorithms and key lengths. It's a simple solution for creating, viewing, and saving SSH keys.
 
 ## Features
 
