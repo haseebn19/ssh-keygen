@@ -1,0 +1,24 @@
+{
+    "title": "SSH Key Generator",
+    "icon": "logo.ico",
+    "min_size": [
+        400,
+        400
+    ],
+    "geometry": "400x400",
+    "algorithm_bits_options": {
+        "RSA": [
+            1024,
+            2048,
+            4096
+        ],
+        "DSA": [
+            1024
+        ],
+        "ECDSA": [
+            256,
+            384,
+            521
+        ]
+    }
+}
