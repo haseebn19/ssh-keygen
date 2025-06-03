@@ -1,0 +1,33 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4A6572" />
+            <stop offset="100%" stop-color="#283E50" />
+        </linearGradient>
+        <linearGradient id="keyUnifiedGradient" x1="106" y1="0" x2="4" y2="0"
+            gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#F0F4F7" />
+            <stop offset="100%" stop-color="#BCCCDC" />
+        </linearGradient>
+        <mask id="keyHoleMask">
+            <rect width="128" height="128" fill="white" />
+            <circle cx="28" cy="28" r="10.5" fill="black" />
+        </mask>
+    </defs>
+    <rect width="128" height="128" rx="20" fill="url(#bgGradient)" />
+    <g transform="translate(10,32) scale(1.1)">
+        <g fill="#000" opacity="0.25">
+            <circle cx="28" cy="28" r="25.5" />
+            <rect x="48.5" y="22.5" width="49" height="14" />
+            <rect x="66.5" y="33.5" width="13" height="16" />
+            <rect x="84.5" y="33.5" width="13" height="16" />
+        </g>
+        <g mask="url(#keyHoleMask)">
+            <circle cx="28" cy="28" r="24" fill="url(#keyUnifiedGradient)" />
+        </g>
+        <rect x="50" y="24" width="46" height="11" fill="url(#keyUnifiedGradient)" />
+        <rect x="68" y="34" width="10" height="14" fill="url(#keyUnifiedGradient)" />
+        <rect x="86" y="34" width="10" height="14" fill="url(#keyUnifiedGradient)" />
+    </g>
+</svg>
+   
