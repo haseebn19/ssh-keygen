@@ -1,33 +1,28 @@
-"""SSH Key Generator application entry point."""
+"""Application entry point."""
 
-import sys
 import ctypes
-from pathlib import Path
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QIcon
-from src.ui.main_window import MainWindow
+import sys
 
-APP_ID = 'SSH.KeyGenerator.1.0'
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication
+
+from src.ui.main_window import MainWindow
+from src.utils import resource_path
+
+APP_ID = "SSH.KeyGenerator.1.0"
 
 
 def set_taskbar_icon() -> None:
-    """Set application ID for Windows taskbar grouping."""
-    if sys.platform == 'win32':
+    """Set Windows taskbar app ID."""
+    if sys.platform == "win32":
         try:
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
-        except Exception as e:
-            if __debug__:
-                print(f"Failed to set taskbar icon: {e}")
-
-
-def resource_path(relative_path: str) -> Path:
-    """Resolve resource path for development and PyInstaller."""
-    base_path = Path(getattr(sys, '_MEIPASS', Path(__file__).parent.parent))
-    return base_path / relative_path
+        except Exception:
+            pass
 
 
 def main() -> None:
-    """Initialize and run the application."""
+    """Run the application."""
     set_taskbar_icon()
 
     app = QApplication(sys.argv)
