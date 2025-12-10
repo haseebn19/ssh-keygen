@@ -6,6 +6,12 @@
 
 A desktop application for generating SSH keys with a user-friendly interface.
 
+## Screenshots
+
+<img src="resources/screenshot-window.png" alt="Main Window" width="500">
+
+<img src="resources/screenshot-generated.png" alt="Generated Output" width="500">
+
 ## Features
 
 - **Multiple Algorithms**: ED25519, RSA, and ECDSA key support
