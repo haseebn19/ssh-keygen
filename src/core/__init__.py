@@ -1,0 +1,1 @@
+"""Core key generation logic."""

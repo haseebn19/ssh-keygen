@@ -1,2 +1,0 @@
-# Only required for building executable
-pyinstaller>=6.0.0

@@ -1,89 +1,118 @@
 # SSH Key Generator
 
-<img src="resources/logo.svg" width="250">
+[![CI](https://github.com/haseebn19/ssh-keygen/actions/workflows/ci.yml/badge.svg)](https://github.com/haseebn19/ssh-keygen/actions/workflows/ci.yml)
 
-This SSH Key Generator is a desktop application designed to simplify the process of generating SSH keys. Built with Python and PyQt6, it provides a clean and user-friendly interface for creating secure SSH key pairs using different algorithms and key lengths.
+<img src="resources/logo.svg" alt="SSH Key Generator Logo" width="250">
 
-## Screenshots
-
-**Main Window**
-
-<img src="resources/screenshot-window.png" alt="Main Window" width="500">
-
-**After Generating a Key**
-
-<img src="resources/screenshot-generated.png" alt="Generated Output" width="500">
+A desktop application for generating SSH keys with a user-friendly interface.
 
 ## Features
 
-* **ED25519, RSA, and ECDSA key support**
-* **Multiple key size options**
-* **Default `~/.ssh` or custom output location**
-* **Optional passphrase protection**
-* **Quick copy and file access**
-* **Public key content display**
-* **Fingerprint generation and display**
-
-## Built With
-
-* Python 3.11+
-* PyQt6
-* cryptography
-* PyInstaller (for builds)
+- **Multiple Algorithms**: ED25519, RSA, and ECDSA key support
+- **Key Size Options**: 2048-4096 for RSA, 256/384/521 for ECDSA
+- **Passphrase Protection**: Optional encryption for private keys
+- **Fingerprint Display**: SHA256 fingerprint generation
+- **Quick Copy**: One-click copy for public key and fingerprint
+- **Dark/Light Theme**: Automatic theme detection
 
 ## Prerequisites
 
-* Python 3.11+
+- Python 3.11+
 
-## Setup
+## Installation
 
-1. Install Python 3.11+
-2. Clone and set up the environment:
-
-```powershell
+```bash
 git clone https://github.com/haseebn19/ssh-keygen.git
 cd ssh-keygen
 python -m venv .venv
+
+# Windows
 .\.venv\Scripts\Activate
-pip install -r requirements.txt
+
+# Linux/macOS
+source .venv/bin/activate
+
+pip install -e .
 ```
-
-3. Run the application:
-
-```powershell
-python -m src.main
-```
-
-> 💡 Note: Running `python src/main.py` directly will not work due to how Python handles module resolution in packages.
 
 ## Usage
 
-1. Select the algorithm and key size.
-2. Optionally, enter a comment and passphrase.
-3. Choose the output location or use the default.
-4. Click "Generate SSH Key".
-5. View and access generated key files, fingerprint, and public key content.
+```bash
+python -m src.main
+```
 
-## Build
+1. Select the algorithm and key size
+2. Optionally enter a comment and passphrase
+3. Choose the output location or use the default (`~/.ssh`)
+4. Click "Generate SSH Key"
+5. Copy the public key or open the file location
 
-Create a standalone executable using PyInstaller:
+## Development
 
-```powershell
-pip install -r requirements-dev.txt
+### Setup
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Testing
+
+```bash
+pytest
+```
+
+With coverage:
+
+```bash
+pytest --cov=src
+```
+
+### Linting
+
+```bash
+ruff check src/ tests/
+ruff format src/ tests/
+```
+
+## Building
+
+Create a standalone executable:
+
+```bash
 pyinstaller main.spec
 ```
 
-The resulting `.exe` will be in the `dist/` folder.
+The `.exe` will be in the `dist/` folder.
+
+## Project Structure
+
+```
+ssh-keygen/
+├── src/
+│   ├── main.py               # Entry point
+│   ├── utils.py              # Utilities
+│   ├── core/
+│   │   └── key_generator.py  # Key generation logic
+│   └── ui/
+│       └── main_window.py    # PyQt6 interface
+├── tests/                    # Test suite
+├── resources/                # Icons
+├── pyproject.toml            # Project config
+└── main.spec                 # PyInstaller config
+```
 
 ## Contributing
 
-To set up a development environment:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-```powershell
-pip install -r requirements-dev.txt
-```
+## Credits
 
-Feel free to fork the repository and submit a pull request with improvements or new features.
+- [cryptography](https://cryptography.io/) - Key generation
+- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) - User interface
 
 ## License
 
