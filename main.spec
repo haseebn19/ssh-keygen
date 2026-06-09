@@ -4,7 +4,7 @@ from pathlib import Path
 project_root = Path(".").resolve()
 
 a = Analysis(
-    ['src/main.py'],
+    ['src/ssh_keygen/main.py'],
     pathex=['.'],
     binaries=[],
     datas=[('resources/logo.ico', 'resources')],

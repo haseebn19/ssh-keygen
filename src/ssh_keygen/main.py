@@ -1,13 +1,14 @@
 """Application entry point."""
 
+import contextlib
 import ctypes
 import sys
 
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
-from src.ui.main_window import MainWindow
-from src.utils import resource_path
+from ssh_keygen.ui.main_window import MainWindow
+from ssh_keygen.utils import resource_path
 
 APP_ID = "SSH.KeyGenerator.1.0"
 
@@ -15,10 +16,8 @@ APP_ID = "SSH.KeyGenerator.1.0"
 def set_taskbar_icon() -> None:
     """Set Windows taskbar app ID."""
     if sys.platform == "win32":
-        try:
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(ctypes.c_wchar_p(APP_ID))
 
 
 def main() -> None:

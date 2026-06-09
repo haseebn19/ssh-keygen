@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.core.key_generator import KeyGenerator
+from ssh_keygen.core.key_generator import KeyGenerator
 
 
 class TestKeyGenerator:

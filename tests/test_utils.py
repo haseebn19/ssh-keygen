@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.utils import resource_path, sanitize_filename
+from ssh_keygen.utils import resource_path, sanitize_filename
 
 
 class TestResourcePath:

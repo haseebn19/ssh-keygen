@@ -25,8 +25,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.key_generator import KeyGenerator
-from src.utils import resource_path, sanitize_filename
+from ssh_keygen.core.key_generator import KeyGenerator
+from ssh_keygen.utils import resource_path, sanitize_filename
 
 
 class MainWindow(QMainWindow):
