@@ -11,7 +11,7 @@ authors = [
 dependencies = [
     "cryptography>=42.0.2",
     "PyQt6>=6.6.1",
-    "pywin32>=306; sys_platform == 'win32'",
+    "pywin32>=312; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
