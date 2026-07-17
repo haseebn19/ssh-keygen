@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "cryptography>=42.0.2",
-    "PyQt6>=6.6.1",
+    "PyQt6>=6.11.0",
     "pywin32>=306; sys_platform == 'win32'",
 ]
 
