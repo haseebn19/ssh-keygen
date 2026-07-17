@@ -9,7 +9,7 @@ authors = [
     {name = "Haseeb N", email = "haseeb.kn@outlook.com"}
 ]
 dependencies = [
-    "cryptography>=42.0.2",
+    "cryptography>=49.0.0",
     "PyQt6>=6.6.1",
     "pywin32>=306; sys_platform == 'win32'",
 ]
