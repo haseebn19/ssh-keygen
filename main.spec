@@ -7,7 +7,7 @@ a = Analysis(
     ['src/ssh_keygen/main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[('resources/logo.ico', 'resources')],
+    datas=[('src/ssh_keygen/resources/logo.ico', 'resources')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -38,5 +38,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='resources/logo.ico',
+    icon='src/ssh_keygen/resources/logo.ico',
 )

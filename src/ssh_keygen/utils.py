@@ -6,7 +6,7 @@ from pathlib import Path
 
 def resource_path(relative_path: str) -> Path:
     """Resolve path for both dev and PyInstaller builds."""
-    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.parent))
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
     return base_path / relative_path
 
 

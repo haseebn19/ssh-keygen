@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/haseebn19/ssh-keygen/actions/workflows/ci.yml/badge.svg)](https://github.com/haseebn19/ssh-keygen/actions/workflows/ci.yml)
 
-<img src="resources/logo.svg" alt="SSH Key Generator Logo" width="250">
+<img src="src/ssh_keygen/resources/logo.svg" alt="SSH Key Generator Logo" width="250">
 
 A desktop application for generating SSH keys with a user-friendly interface.
 
@@ -44,7 +44,7 @@ pip install -e .
 ## Usage
 
 ```bash
-python -m src.main
+ssh-keygen
 ```
 
 1. Select the algorithm and key size
@@ -95,14 +95,16 @@ The `.exe` will be in the `dist/` folder.
 ```
 ssh-keygen/
 ├── src/
-│   ├── main.py               # Entry point
-│   ├── utils.py              # Utilities
-│   ├── core/
-│   │   └── key_generator.py  # Key generation logic
-│   └── ui/
-│       └── main_window.py    # PyQt6 interface
+│   └── ssh_keygen/
+│       ├── main.py               # Entry point
+│       ├── utils.py              # Utilities
+│       ├── resources/            # Packaged application icons
+│       ├── core/
+│       │   └── key_generator.py  # Key generation logic
+│       └── ui/
+│           └── main_window.py    # PyQt6 interface
 ├── tests/                    # Test suite
-├── resources/                # Icons
+├── resources/                # README screenshots
 ├── pyproject.toml            # Project config
 └── main.spec                 # PyInstaller config
 ```

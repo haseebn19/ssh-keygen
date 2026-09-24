@@ -3,10 +3,11 @@ name = "ssh-keygen"
 version = "1.0.0"
 description = "A desktop application for generating SSH keys"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [
-    {name = "Haseeb N", email = "haseeb.kn@outlook.com"}
+    {name = "Haseeb Niazi", email = "haseeb.kn@outlook.com"}
 ]
 dependencies = [
     "cryptography>=42.0.2",
@@ -26,12 +27,18 @@ dev = [
 Homepage = "https://github.com/haseebn19/ssh-keygen"
 Repository = "https://github.com/haseebn19/ssh-keygen.git"
 
+[project.scripts]
+ssh-keygen = "ssh_keygen.main:main"
+
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ssh_keygen = ["resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
