@@ -4,7 +4,7 @@
 
 <img src="src/ssh_keygen/resources/logo.svg" alt="SSH Key Generator Logo" width="250">
 
-A desktop application for generating SSH keys with a user-friendly interface.
+A desktop application for generating SSH keys and displaying their public keys and fingerprints.
 
 ## Screenshots
 
