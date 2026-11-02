@@ -3,10 +3,10 @@
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QPalette
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -26,45 +26,28 @@ from PyQt6.QtWidgets import (
 )
 
 from ssh_keygen.core.key_generator import KeyGenerator
-from ssh_keygen.utils import resource_path, sanitize_filename
+from ssh_keygen.utils import sanitize_filename
 
 
 class MainWindow(QMainWindow):
     """Main application window."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.setWindowTitle("SSH Key Generator")
         self.setMinimumSize(600, 750)
 
-        icon_path = resource_path("resources/logo.ico")
-        if icon_path.exists():
-            icon = QIcon(str(icon_path))
-            self.setWindowIcon(icon)
-            if self.windowHandle():
-                self.windowHandle().setIcon(icon)
-            if sys.platform == "win32":
-                try:
-                    from win32api import LoadImage
-                    from win32con import ICON_BIG, IMAGE_ICON, LR_LOADFROMFILE, WM_SETICON
-                    from win32gui import SendMessage
-
-                    icon_handle = LoadImage(0, str(icon_path), IMAGE_ICON, 0, 0, LR_LOADFROMFILE)
-                    SendMessage(self.winId().__int__(), WM_SETICON, ICON_BIG, icon_handle)
-                except ImportError:
-                    pass
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setCentralWidget(scroll)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setCentralWidget(self.scroll_area)
 
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(20, 20, 20, 20)
-        scroll.setWidget(main_widget)
+        self.scroll_area.setWidget(main_widget)
 
         title_label = QLabel("SSH Key Generator")
         title_label.setStyleSheet("font-size: 24px; font-weight: bold; padding: 10px;")
@@ -72,7 +55,6 @@ class MainWindow(QMainWindow):
         main_layout.addSpacing(10)
 
         options_group = QGroupBox("Key Generation Options")
-        options_group.setMinimumHeight(220)
         options_layout = QFormLayout(options_group)
         options_layout.setSpacing(12)
         options_layout.setContentsMargins(20, 20, 20, 20)
@@ -105,7 +87,6 @@ class MainWindow(QMainWindow):
         main_layout.addSpacing(15)
 
         output_group = QGroupBox("Output Options")
-        output_group.setMinimumHeight(170)
         output_layout = QFormLayout(output_group)
         output_layout.setSpacing(12)
         output_layout.setContentsMargins(20, 20, 20, 20)
@@ -113,19 +94,19 @@ class MainWindow(QMainWindow):
 
         self.default_location_check = QCheckBox("Use default location (~/.ssh)")
         self.default_location_check.setChecked(True)
-        self.default_location_check.stateChanged.connect(self.toggle_output_path)
+        self.default_location_check.toggled.connect(self.toggle_output_path)
         output_layout.addRow(self.default_location_check)
 
-        self.output_dir_layout = QHBoxLayout()
+        output_dir_layout = QHBoxLayout()
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setPlaceholderText("Output directory")
         self.output_dir_edit.setEnabled(False)
         self.output_dir_button = QPushButton("Browse...")
         self.output_dir_button.setEnabled(False)
         self.output_dir_button.clicked.connect(self.browse_output_dir)
-        self.output_dir_layout.addWidget(self.output_dir_edit)
-        self.output_dir_layout.addWidget(self.output_dir_button)
-        output_layout.addRow("Output Directory:", self.output_dir_layout)
+        output_dir_layout.addWidget(self.output_dir_edit)
+        output_dir_layout.addWidget(self.output_dir_button)
+        output_layout.addRow("Output Directory:", output_dir_layout)
 
         self.filename_edit = QLineEdit()
         self.filename_edit.setText("id_ssh")
@@ -164,7 +145,7 @@ class MainWindow(QMainWindow):
 
         self.key_generator = KeyGenerator()
 
-    def update_key_bits_options(self, key_type):
+    def update_key_bits_options(self, key_type: str) -> None:
         self.key_bits_combo.clear()
         if key_type == "rsa":
             self.key_bits_combo.addItems(["2048", "3072", "4096"])
@@ -176,19 +157,18 @@ class MainWindow(QMainWindow):
             self.key_bits_combo.addItems(["256", "384", "521"])
             self.key_bits_combo.setCurrentText("256")
 
-    def toggle_output_path(self, state):
-        enable_custom = not state
-        self.output_dir_edit.setEnabled(enable_custom)
-        self.output_dir_button.setEnabled(enable_custom)
+    def toggle_output_path(self, use_default: bool) -> None:
+        self.output_dir_edit.setEnabled(not use_default)
+        self.output_dir_button.setEnabled(not use_default)
 
-    def browse_output_dir(self):
+    def browse_output_dir(self) -> None:
         directory = QFileDialog.getExistingDirectory(
             self, "Select Output Directory", str(Path.home())
         )
         if directory:
             self.output_dir_edit.setText(directory)
 
-    def generate_key(self):
+    def generate_key(self) -> None:
         if self.passphrase_edit.text() != self.confirm_passphrase_edit.text():
             QMessageBox.warning(
                 self, "Passphrase Mismatch", "The passphrases you entered do not match."
@@ -211,7 +191,13 @@ class MainWindow(QMainWindow):
             )
             return
 
-        filename = sanitize_filename(self.filename_edit.text().strip()) or "id_ssh"
+        filename = sanitize_filename(self.filename_edit.text())
+
+        existing = [
+            path for path in self.key_generator.key_paths(output_dir, filename) if path.exists()
+        ]
+        if existing and not self.confirm_replace(existing[0]):
+            return
 
         try:
             private_key_path, public_key_path = self.key_generator.generate_key(
@@ -221,84 +207,59 @@ class MainWindow(QMainWindow):
                 passphrase=passphrase,
                 output_dir=output_dir,
                 filename=filename,
+                overwrite=bool(existing),
             )
 
-            fingerprint = self.key_generator.get_fingerprint(public_key_path)
-
-            self.private_key_label.setText(str(private_key_path))
-            self.public_key_label.setText(str(public_key_path))
-            self.fingerprint_label.setText(fingerprint)
-
-            with Path(public_key_path).open(encoding="utf-8") as f:
-                self.public_key_content.setText(f.read().strip())
+            self.private_key_path_field.setText(str(private_key_path))
+            self.public_key_path_field.setText(str(public_key_path))
+            self.fingerprint_field.setText(self.key_generator.get_fingerprint(public_key_path))
+            self.public_key_field.setText(public_key_path.read_text(encoding="utf-8").strip())
 
             self.results_group.setVisible(True)
-            self.statusBar().showMessage(f"SSH key pair successfully generated: {private_key_path}")
-            QMessageBox.information(
-                self,
-                "Success",
-                f"SSH key pair successfully generated:\nPrivate key: {private_key_path}\nPublic key: {public_key_path}",
+            self.statusBar().showMessage(
+                f"Generated {private_key_path.name} and {public_key_path.name}"
             )
+            # Wait for the layout to make room for the results before scrolling to them
+            QTimer.singleShot(0, lambda: self.scroll_area.ensureWidgetVisible(self.results_group))
 
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to generate SSH key: {e!s}")
+        except (OSError, ValueError) as e:
+            QMessageBox.critical(self, "Error", f"Could not generate the key: {e}")
 
-    def open_file_location(self, path):
-        path = Path(path).expanduser().resolve()
-        directory = path.parent
+    def confirm_replace(self, existing_path: Path) -> bool:
+        """Ask before overwriting a key, since the old private key cannot be recovered."""
+        answer = QMessageBox.question(
+            self,
+            "Replace Existing Key?",
+            f"{existing_path.name} already exists in {existing_path.parent}.\n\n"
+            "Replacing it permanently deletes the current key. Any server that uses it "
+            "will stop accepting it. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes
 
-        if sys.platform == "win32":
-            os.startfile(directory)
-        elif sys.platform == "darwin":
-            subprocess.run(["open", directory], check=True)
-        else:
-            subprocess.run(["xdg-open", directory], check=True)
+    def open_file_location(self, path: str) -> None:
+        directory = Path(path).expanduser().resolve().parent
+        try:
+            if sys.platform == "win32":
+                os.startfile(directory)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", directory], check=True)
+            else:
+                subprocess.run(["xdg-open", directory], check=True)
+        except (OSError, subprocess.CalledProcessError) as e:
+            QMessageBox.warning(self, "Could Not Open Folder", f"Could not open {directory}: {e}")
 
-    def copy_to_clipboard(self, text):
+    def copy_to_clipboard(self, text: str) -> None:
         QApplication.clipboard().setText(text)
         self.statusBar().showMessage("Copied to clipboard", 2000)
 
-    def setup_results_area(self, layout):
+    def setup_results_area(self, layout: QVBoxLayout) -> None:
         self.results_group = QGroupBox("Generated Keys")
-        self.results_group.setMinimumHeight(300)
-        self.results_layout = QFormLayout(self.results_group)
-        self.results_layout.setSpacing(15)
-        self.results_layout.setContentsMargins(20, 20, 20, 20)
+        results_layout = QFormLayout(self.results_group)
+        results_layout.setSpacing(15)
+        results_layout.setContentsMargins(20, 20, 20, 20)
         self.results_group.setVisible(False)
-
-        palette = QApplication.palette()
-        is_dark_theme = palette.color(QPalette.ColorRole.Window).lightness() < 128
-
-        if is_dark_theme:
-            field_style = """
-                QLineEdit {
-                    padding: 8px;
-                    min-height: 20px;
-                    background-color: #2d2d2d;
-                    color: #e0e0e0;
-                    border: 1px solid #555;
-                    border-radius: 4px;
-                }
-                QLineEdit:read-only {
-                    background-color: #3d3d3d;
-                }
-            """
-            label_color = "#e0e0e0"
-        else:
-            field_style = """
-                QLineEdit {
-                    padding: 8px;
-                    min-height: 20px;
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #666;
-                    border-radius: 4px;
-                }
-                QLineEdit:read-only {
-                    background-color: #f8f8f8;
-                }
-            """
-            label_color = "#333333"
 
         button_style = """
             QPushButton {
@@ -314,49 +275,30 @@ class MainWindow(QMainWindow):
             }
         """
 
-        def add_result_row(label, line_edit_attr, button_text=None, button_callback=None):
-            layout_row = QHBoxLayout()
-            line_edit = QLineEdit()
-            line_edit.setReadOnly(True)
-            line_edit.setStyleSheet(field_style)
-            setattr(self, line_edit_attr, line_edit)
-            layout_row.addWidget(line_edit)
-            if button_text and button_callback:
-                button = QPushButton(button_text)
-                button.setStyleSheet(button_style)
-                button.clicked.connect(button_callback)
-                layout_row.addWidget(button)
-            self.results_layout.addRow(label, layout_row)
+        def add_result_row(
+            label: str, button_text: str, action: Callable[[str], None]
+        ) -> QLineEdit:
+            """Add a read-only field with a button that calls `action` with the field's text."""
+            field = QLineEdit()
+            field.setReadOnly(True)
+            button = QPushButton(button_text)
+            button.setStyleSheet(button_style)
+            button.clicked.connect(lambda: action(field.text()))
+            row = QHBoxLayout()
+            row.addWidget(field)
+            row.addWidget(button)
+            results_layout.addRow(label, row)
+            return field
 
-        add_result_row(
-            "Private Key:",
-            "private_key_label",
-            "Open Location",
-            lambda: self.open_file_location(self.private_key_label.text()),
+        self.private_key_path_field = add_result_row(
+            "Private Key:", "Open Location", self.open_file_location
         )
-        add_result_row(
-            "Public Key:",
-            "public_key_label",
-            "Open Location",
-            lambda: self.open_file_location(self.public_key_label.text()),
+        self.public_key_path_field = add_result_row(
+            "Public Key:", "Open Location", self.open_file_location
         )
-        add_result_row(
-            "Fingerprint:",
-            "fingerprint_label",
-            "Copy",
-            lambda: self.copy_to_clipboard(self.fingerprint_label.text()),
+        self.fingerprint_field = add_result_row("Fingerprint:", "Copy", self.copy_to_clipboard)
+        self.public_key_field = add_result_row(
+            "Public Key Content:", "Copy", self.copy_to_clipboard
         )
-        add_result_row(
-            "Public Key Content:",
-            "public_key_content",
-            "Copy",
-            lambda: self.copy_to_clipboard(self.public_key_content.text()),
-        )
-
-        label_style = f"QLabel {{ color: {label_color}; font-size: 11pt; }}"
-        for i in range(self.results_layout.rowCount()):
-            label_item = self.results_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
-            if label_item and label_item.widget():
-                label_item.widget().setStyleSheet(label_style)
 
         layout.addWidget(self.results_group)

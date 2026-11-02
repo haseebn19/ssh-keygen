@@ -1,221 +1,106 @@
-"""Tests for SSH key generator functionality."""
-
-import shutil
-import tempfile
-from pathlib import Path
+import os
+import stat
 
 import pytest
 
 from ssh_keygen.core.key_generator import KeyGenerator
 
 
-class TestKeyGenerator:
-    """Tests for KeyGenerator class."""
+@pytest.fixture
+def generator():
+    return KeyGenerator()
 
-    @pytest.fixture
-    def generator(self):
-        """Create a KeyGenerator instance."""
-        return KeyGenerator()
 
-    @pytest.fixture
-    def temp_dir(self):
-        """Create a temporary directory for key output."""
-        temp_path = tempfile.mkdtemp()
-        yield temp_path
-        shutil.rmtree(temp_path, ignore_errors=True)
-
-    # ----- ED25519 Tests -----
-
-    def test_generate_ed25519_key(self, generator, temp_dir):
-        """Should generate ED25519 key pair."""
-        private_path, public_path = generator.generate_key(
-            key_type="ed25519", output_dir=temp_dir, filename="test_ed25519"
-        )
-
-        assert private_path.exists()
-        assert public_path.exists()
-        assert private_path.suffix == ".pem"
-        assert public_path.suffix == ".pub"
-
-    def test_ed25519_public_key_format(self, generator, temp_dir):
-        """ED25519 public key should have correct format."""
-        _, public_path = generator.generate_key(
-            key_type="ed25519", output_dir=temp_dir, filename="test_ed25519"
-        )
-
-        content = public_path.read_text()
-        assert content.startswith("ssh-ed25519 ")
-
-    # ----- RSA Tests -----
-
-    def test_generate_rsa_key(self, generator, temp_dir):
-        """Should generate RSA key pair."""
-        private_path, public_path = generator.generate_key(
-            key_type="rsa",
-            bits=2048,  # Use smaller key for faster tests
-            output_dir=temp_dir,
-            filename="test_rsa",
-        )
-
-        assert private_path.exists()
-        assert public_path.exists()
-
-    def test_rsa_public_key_format(self, generator, temp_dir):
-        """RSA public key should have correct format."""
-        _, public_path = generator.generate_key(
-            key_type="rsa", bits=2048, output_dir=temp_dir, filename="test_rsa"
-        )
-
-        content = public_path.read_text()
-        assert content.startswith("ssh-rsa ")
-
-    @pytest.mark.parametrize("bits", [2048, 3072, 4096])
-    def test_rsa_key_sizes(self, generator, temp_dir, bits):
-        """Should generate RSA keys with different sizes."""
-        private_path, public_path = generator.generate_key(
-            key_type="rsa", bits=bits, output_dir=temp_dir, filename=f"test_rsa_{bits}"
-        )
-
-        assert private_path.exists()
-        assert public_path.exists()
-
-    # ----- ECDSA Tests -----
-
-    def test_generate_ecdsa_key(self, generator, temp_dir):
-        """Should generate ECDSA key pair."""
-        private_path, public_path = generator.generate_key(
-            key_type="ecdsa", bits=256, output_dir=temp_dir, filename="test_ecdsa"
-        )
-
-        assert private_path.exists()
-        assert public_path.exists()
-
-    def test_ecdsa_public_key_format(self, generator, temp_dir):
-        """ECDSA public key should have correct format."""
-        _, public_path = generator.generate_key(
-            key_type="ecdsa", bits=256, output_dir=temp_dir, filename="test_ecdsa"
-        )
-
-        content = public_path.read_text()
-        assert content.startswith("ecdsa-sha2-nistp256 ")
-
-    @pytest.mark.parametrize(
-        "bits,curve_name",
-        [
-            (256, "nistp256"),
-            (384, "nistp384"),
-            (521, "nistp521"),
-        ],
+@pytest.mark.parametrize(
+    ("key_type", "bits", "prefix"),
+    [
+        ("ed25519", 256, "ssh-ed25519 "),
+        ("rsa", 2048, "ssh-rsa "),
+        ("rsa", 3072, "ssh-rsa "),
+        ("rsa", 4096, "ssh-rsa "),
+        ("ecdsa", 256, "ecdsa-sha2-nistp256 "),
+        ("ecdsa", 384, "ecdsa-sha2-nistp384 "),
+        ("ecdsa", 521, "ecdsa-sha2-nistp521 "),
+    ],
+)
+def test_generates_each_key_type(generator, tmp_path, key_type, bits, prefix):
+    private_path, public_path = generator.generate_key(
+        key_type=key_type, bits=bits, output_dir=tmp_path, filename="key"
     )
-    def test_ecdsa_key_sizes(self, generator, temp_dir, bits, curve_name):
-        """Should generate ECDSA keys with correct curves based on bits."""
-        _, public_path = generator.generate_key(
-            key_type="ecdsa", bits=bits, output_dir=temp_dir, filename=f"test_ecdsa_{bits}"
-        )
 
-        content = public_path.read_text()
-        assert curve_name in content, f"Expected {curve_name} in public key"
+    assert private_path == tmp_path / "key.pem"
+    assert public_path == tmp_path / "key.pub"
+    assert private_path.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+    assert public_path.read_text().startswith(prefix)
 
-    # ----- Comment Tests -----
 
-    def test_comment_added_to_public_key(self, generator, temp_dir):
-        """Comment should be appended to public key."""
-        comment = "user@hostname"
-        _, public_path = generator.generate_key(
-            key_type="ed25519", comment=comment, output_dir=temp_dir, filename="test_comment"
-        )
+def test_unsupported_key_types_and_sizes_are_rejected(generator, tmp_path):
+    with pytest.raises(ValueError, match="Unsupported key type"):
+        generator.generate_key(key_type="dsa", output_dir=tmp_path)
+    with pytest.raises(ValueError, match="Unsupported ECDSA key size"):
+        generator.generate_key(key_type="ecdsa", bits=4096, output_dir=tmp_path)
 
-        content = public_path.read_text()
-        assert content.endswith(comment)
 
-    def test_empty_comment(self, generator, temp_dir):
-        """Empty comment should not add trailing space."""
-        _, public_path = generator.generate_key(
-            key_type="ed25519", comment="", output_dir=temp_dir, filename="test_no_comment"
-        )
+def test_public_key_is_one_line_with_the_comment(generator, tmp_path):
+    _, with_comment = generator.generate_key(output_dir=tmp_path, filename="a", comment="me@laptop")
+    _, without_comment = generator.generate_key(output_dir=tmp_path, filename="b")
 
-        content = public_path.read_text()
-        # Should end with base64 characters, not a space
-        assert not content.endswith(" ")
+    assert with_comment.read_text().endswith(" me@laptop\n")
+    assert len(without_comment.read_text().split()) == 2
+    assert without_comment.read_text().endswith("\n")
 
-    # ----- Passphrase Tests -----
 
-    def test_passphrase_encrypted_key(self, generator, temp_dir):
-        """Key with passphrase should be encrypted."""
-        private_path, _ = generator.generate_key(
-            key_type="ed25519",
-            passphrase="secure_passphrase",
-            output_dir=temp_dir,
-            filename="test_passphrase",
-        )
+def test_passphrase_encrypts_the_private_key(generator, tmp_path):
+    encrypted, _ = generator.generate_key(output_dir=tmp_path, filename="a", passphrase="secret")
+    plain, _ = generator.generate_key(output_dir=tmp_path, filename="b")
 
-        content = private_path.read_text()
-        # Encrypted keys contain ENCRYPTED in the header
-        assert "ENCRYPTED" in content
+    assert "ENCRYPTED" in encrypted.read_text()
+    assert "ENCRYPTED" not in plain.read_text()
 
-    def test_no_passphrase_unencrypted_key(self, generator, temp_dir):
-        """Key without passphrase should not be encrypted."""
-        private_path, _ = generator.generate_key(
-            key_type="ed25519", passphrase="", output_dir=temp_dir, filename="test_no_passphrase"
-        )
 
-        content = private_path.read_text()
-        assert "ENCRYPTED" not in content
+def test_creates_the_output_directory(generator, tmp_path):
+    nested = tmp_path / "keys" / "work"
+    generator.generate_key(output_dir=str(nested))
+    assert (nested / "id_ssh.pub").exists()
 
-    # ----- Output Directory Tests -----
 
-    def test_creates_output_directory(self, generator, temp_dir):
-        """Should create output directory if it doesn't exist."""
-        new_dir = Path(temp_dir) / "subdir" / "nested"
-        generator.generate_key(key_type="ed25519", output_dir=str(new_dir), filename="test_nested")
+def test_refuses_to_replace_an_existing_key_unless_asked(generator, tmp_path):
+    private_path, _ = generator.generate_key(output_dir=tmp_path)
+    original = private_path.read_bytes()
 
-        assert new_dir.exists()
+    with pytest.raises(FileExistsError):
+        generator.generate_key(output_dir=tmp_path)
+    assert private_path.read_bytes() == original
 
-    def test_custom_filename(self, generator, temp_dir):
-        """Should use custom filename for key files."""
-        filename = "my_custom_key"
-        private_path, public_path = generator.generate_key(
-            key_type="ed25519", output_dir=temp_dir, filename=filename
-        )
+    generator.generate_key(output_dir=tmp_path, overwrite=True)
+    assert private_path.read_bytes() != original
 
-        assert private_path.name == f"{filename}.pem"
-        assert public_path.name == f"{filename}.pub"
 
-    # ----- Error Handling Tests -----
+@pytest.mark.skipif(os.name != "posix", reason="File modes only apply on POSIX systems")
+def test_private_key_is_readable_by_its_owner_only(generator, tmp_path):
+    private_path, _ = generator.generate_key(output_dir=tmp_path)
+    assert stat.S_IMODE(private_path.stat().st_mode) == 0o600
 
-    def test_invalid_key_type_raises_error(self, generator, temp_dir):
-        """Should raise ValueError for invalid key type."""
-        with pytest.raises(ValueError, match="Unsupported key type"):
-            generator.generate_key(key_type="invalid", output_dir=temp_dir, filename="test_invalid")
+    # Replacing a key resets the mode too
+    private_path.chmod(0o644)
+    generator.generate_key(output_dir=tmp_path, overwrite=True)
+    assert stat.S_IMODE(private_path.stat().st_mode) == 0o600
 
-    # ----- Fingerprint Tests -----
 
-    def test_get_fingerprint(self, generator, temp_dir):
-        """Should return valid SHA256 fingerprint."""
-        _, public_path = generator.generate_key(
-            key_type="ed25519", output_dir=temp_dir, filename="test_fingerprint"
-        )
+def test_fingerprint(generator, tmp_path):
+    public_path = tmp_path / "known.pub"
+    # The fingerprint `ssh-keygen -lf` reports for this key
+    public_path.write_text(
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzWDkfV0noc/2zXPRSgUU/guCzc3wHJjIgujLNSqvQh me\n"
+    )
+    assert (
+        generator.get_fingerprint(public_path)
+        == "SHA256:CpFWCWzsNqeUPcgT8IabbslrO4aoS8AuoemIpFSWhJs"
+    )
 
-        fingerprint = generator.get_fingerprint(public_path)
-        assert fingerprint.startswith("SHA256:")
-        assert len(fingerprint) > 10
 
-    def test_fingerprint_consistency(self, generator, temp_dir):
-        """Fingerprint should be consistent for same key."""
-        _, public_path = generator.generate_key(
-            key_type="ed25519", output_dir=temp_dir, filename="test_consistency"
-        )
-
-        fp1 = generator.get_fingerprint(public_path)
-        fp2 = generator.get_fingerprint(str(public_path))  # Test with str path
-
-        assert fp1 == fp2
-
-    def test_fingerprint_invalid_format_raises_error(self, generator, temp_dir):
-        """Should raise ValueError for invalid public key format."""
-        invalid_key_path = Path(temp_dir) / "invalid.pub"
-        # Write content with fewer than 2 parts (no space separator)
-        invalid_key_path.write_text("invalidkeycontent")
-
-        with pytest.raises(ValueError, match="Invalid public key format"):
-            generator.get_fingerprint(invalid_key_path)
+def test_fingerprint_of_an_invalid_file_is_rejected(generator, tmp_path):
+    public_path = tmp_path / "invalid.pub"
+    public_path.write_text("not-a-key")
+    with pytest.raises(ValueError, match="Invalid public key format"):
+        generator.get_fingerprint(public_path)

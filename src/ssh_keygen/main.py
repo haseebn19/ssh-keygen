@@ -1,6 +1,5 @@
 """Application entry point."""
 
-import contextlib
 import ctypes
 import sys
 
@@ -10,26 +9,18 @@ from PyQt6.QtWidgets import QApplication
 from ssh_keygen.ui.main_window import MainWindow
 from ssh_keygen.utils import resource_path
 
-APP_ID = "SSH.KeyGenerator.1.0"
-
-
-def set_taskbar_icon() -> None:
-    """Set Windows taskbar app ID."""
-    if sys.platform == "win32":
-        with contextlib.suppress(Exception):
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(ctypes.c_wchar_p(APP_ID))
+APP_ID = "SSH.KeyGenerator"
 
 
 def main() -> None:
-    """Run the application."""
-    set_taskbar_icon()
+    # Without its own app ID, Windows groups the window under Python and shows Python's
+    # taskbar icon
+    if sys.platform == "win32":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
 
     app = QApplication(sys.argv)
     app.setApplicationName("SSH Key Generator")
-
-    icon_path = resource_path("resources/logo.ico")
-    if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
+    app.setWindowIcon(QIcon(str(resource_path("resources/logo.ico"))))
 
     window = MainWindow()
     window.show()

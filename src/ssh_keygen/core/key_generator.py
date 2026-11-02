@@ -21,6 +21,12 @@ class KeyGenerator:
         521: ec.SECP521R1(),
     }
 
+    @staticmethod
+    def key_paths(output_dir: str | Path, filename: str) -> tuple[Path, Path]:
+        """Return the private and public key paths for a base filename."""
+        directory = Path(output_dir).expanduser()
+        return directory / f"{filename}.pem", directory / f"{filename}.pub"
+
     def generate_key(
         self,
         key_type: KeyType = "ed25519",
@@ -29,29 +35,40 @@ class KeyGenerator:
         passphrase: str = "",
         output_dir: str = "~/.ssh",
         filename: str = "id_ssh",
+        overwrite: bool = False,
     ) -> tuple[Path, Path]:
-        """Generate an SSH key pair and save to files."""
-        output_dir = Path(output_dir).expanduser()
-        output_dir.mkdir(parents=True, exist_ok=True)
+        """Generate an SSH key pair and save it as <filename>.pem and <filename>.pub.
+
+        Raises FileExistsError if either file exists, unless overwrite is True.
+        """
+        private_key_path, public_key_path = self.key_paths(output_dir, filename)
+        if not overwrite:
+            for path in (private_key_path, public_key_path):
+                if path.exists():
+                    raise FileExistsError(f"Key file already exists: {path}")
+        private_key_path.parent.mkdir(parents=True, exist_ok=True)
 
         if key_type == "rsa":
             private_key = rsa.generate_private_key(public_exponent=65537, key_size=bits)
         elif key_type == "ed25519":
             private_key = ed25519.Ed25519PrivateKey.generate()
         elif key_type == "ecdsa":
-            curve = self.ECDSA_CURVES.get(bits, ec.SECP256R1())
-            private_key = ec.generate_private_key(curve)
+            if bits not in self.ECDSA_CURVES:
+                raise ValueError(f"Unsupported ECDSA key size: {bits}")
+            private_key = ec.generate_private_key(self.ECDSA_CURVES[bits])
         else:
             raise ValueError(f"Unsupported key type: '{key_type}'")
 
-        private_key_path = output_dir / f"{filename}.pem"
         encryption = (
             serialization.BestAvailableEncryption(passphrase.encode())
             if passphrase
             else serialization.NoEncryption()
         )
 
-        with private_key_path.open("wb") as f:
+        # Create the private key readable by its owner only, so no other user can read it
+        # before the permissions are set. Windows ignores this mode.
+        descriptor = os.open(private_key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "wb") as f:
             f.write(
                 private_key.private_bytes(
                     encoding=serialization.Encoding.PEM,
@@ -61,27 +78,23 @@ class KeyGenerator:
             )
 
         if os.name == "posix":
+            # A replaced key file keeps its old mode, so set it again
             private_key_path.chmod(0o600)
 
         public_key = private_key.public_key()
         public_key_bytes = public_key.public_bytes(
             encoding=serialization.Encoding.OpenSSH, format=serialization.PublicFormat.OpenSSH
         )
-        public_key_str = public_key_bytes.decode("utf-8")
+        public_key_line = public_key_bytes.decode("utf-8")
         if comment:
-            public_key_str += f" {comment}"
-
-        public_key_path = output_dir / f"{filename}.pub"
-        with public_key_path.open("w", encoding="utf-8") as f:
-            f.write(public_key_str)
+            public_key_line += f" {comment}"
+        public_key_path.write_text(public_key_line + "\n", encoding="utf-8")
 
         return private_key_path, public_key_path
 
     def get_fingerprint(self, public_key_path: str | Path) -> str:
-        """Get the SHA256 fingerprint of a public key."""
-        path = Path(public_key_path).expanduser()
-        with path.open("r", encoding="utf-8") as f:
-            key_data = f.read().strip()
+        """Return the SHA256 fingerprint of a public key, as `ssh-keygen -l` shows it."""
+        key_data = Path(public_key_path).expanduser().read_text(encoding="utf-8").strip()
 
         key_parts = key_data.split(" ")
         if len(key_parts) < 2:

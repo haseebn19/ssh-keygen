@@ -11,16 +11,9 @@ def resource_path(relative_path: str) -> Path:
 
 
 def sanitize_filename(filename: str) -> str:
-    """Remove invalid filename characters."""
-    invalid_chars = '<>:"/\\|?*'
-
+    """Replace characters Windows does not allow in file names, falling back to 'id_ssh'."""
     sanitized = filename
-    for char in invalid_chars:
+    for char in '<>:"/\\|?*':
         sanitized = sanitized.replace(char, "_")
-
     sanitized = sanitized.strip().strip(".")
-
-    if not sanitized or sanitized.strip("_") == "":
-        sanitized = "id_ssh"
-
-    return sanitized
+    return sanitized if sanitized.strip("_") else "id_ssh"
