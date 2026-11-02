@@ -1,8 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from pathlib import Path
-project_root = Path(".").resolve()
-
 a = Analysis(
     ['src/ssh_keygen/main.py'],
     pathex=['.'],

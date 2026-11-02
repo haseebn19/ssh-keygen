@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ssh-keygen"
-version = "1.0.0"
+version = "2.1.0"
 description = "A desktop application for generating SSH keys"
 readme = "README.md"
 license = "MIT"
@@ -12,7 +16,6 @@ authors = [
 dependencies = [
     "cryptography>=42.0.2",
     "PyQt6>=6.6.1",
-    "pywin32>=306; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -20,7 +23,7 @@ dev = [
     "pyinstaller>=6.0.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
-    "ruff>=0.3.0",
+    "ruff>=0.8.0",
 ]
 
 [project.urls]
@@ -28,11 +31,7 @@ Homepage = "https://github.com/haseebn19/ssh-keygen"
 Repository = "https://github.com/haseebn19/ssh-keygen.git"
 
 [project.scripts]
-ssh-keygen = "ssh_keygen.main:main"
-
-[build-system]
-requires = ["setuptools>=77.0.3", "wheel"]
-build-backend = "setuptools.build_meta"
+ssh-keygen-gui = "ssh_keygen.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -42,22 +41,15 @@ ssh_keygen = ["resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
 addopts = ["-v", "--tb=short"]
 
 [tool.coverage.run]
-source = ["src"]
+source = ["src/ssh_keygen"]
 branch = true
-omit = ["src/ssh_keygen/ui/*", "*/__init__.py"]
 
 [tool.coverage.report]
 fail_under = 65
 show_missing = true
-
-[tool.coverage.html]
-directory = "htmlcov"
 
 [tool.ruff]
 target-version = "py311"
@@ -75,7 +67,7 @@ select = [
     "UP",     # pyupgrade
     "ARG",    # flake8-unused-arguments
     "SIM",    # flake8-simplify
-    "TCH",    # flake8-type-checking
+    "TC",     # flake8-type-checking
     "PTH",    # flake8-use-pathlib
     "RUF",    # ruff-specific rules
 ]
@@ -83,13 +75,5 @@ ignore = [
     "E501",   # line too long (handled by formatter)
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011"]
-
 [tool.ruff.lint.isort]
 known-first-party = ["ssh_keygen"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
